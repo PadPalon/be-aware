@@ -1,3 +1,5 @@
+package ch.neukom.beaware;
+
 import java.net.URL;
 import java.util.Timer;
 import java.util.TimerTask;
