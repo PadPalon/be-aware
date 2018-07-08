@@ -1,25 +1,28 @@
 package ch.neukom.beaware;
 
-import java.net.URL;
+import java.io.File;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import javax.annotation.Nullable;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
+
+import static javax.sound.sampled.AudioSystem.*;
 
 /**
  * plays a sound in a loop with a predefined interval
  */
 public class Pinger {
-    private final URL clipSource;
+    private final File clipSource;
     private final int interval;
 
+    @Nullable
     private Timer timer = null;
+    @Nullable
     private Clip clip = null;
 
-    public Pinger(URL clipSource,
+    public Pinger(File clipSource,
                   int interval) {
         this.clipSource = clipSource;
         this.interval = interval;
@@ -36,8 +39,8 @@ public class Pinger {
     @Nullable
     private TimerTask getPingTask() {
         try {
-            clip = AudioSystem.getClip();
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(clipSource);
+            clip = getClip();
+            AudioInputStream audioStream = getAudioInputStream(clipSource);
             clip.open(audioStream);
             audioStream.close();
 
@@ -46,9 +49,6 @@ public class Pinger {
                 public void run() {
                     clip.setFramePosition(0);
                     clip.start();
-                    while(clip.getFrameLength() > clip.getFramePosition()) {
-                        //wait for playback to finish
-                    }
                 }
             };
         } catch (Exception e) {

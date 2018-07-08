@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'idea'
 
-mainClassName = 'ch.neukom.beaware.Starter'
+mainClassName = 'ch.neukom.beaware.ConfigurationUi'
 
 buildscript {
     repositories {
