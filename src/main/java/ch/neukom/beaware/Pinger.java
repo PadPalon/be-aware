@@ -15,21 +15,20 @@ import javax.sound.sampled.Clip;
 public class Pinger {
     private final URL clipSource;
     private final int interval;
-    private final Timer timer;
 
+    private Timer timer = null;
     private Clip clip = null;
-    private AudioInputStream audioStream = null;
 
     public Pinger(URL clipSource,
                   int interval) {
         this.clipSource = clipSource;
         this.interval = interval;
-        timer = new Timer(true);
     }
 
     public void start() {
         TimerTask task = getPingTask();
         if(task != null) {
+            timer = new Timer();
             timer.scheduleAtFixedRate(task, 0, interval * 1000L);
         }
     }
@@ -38,8 +37,9 @@ public class Pinger {
     private TimerTask getPingTask() {
         try {
             clip = AudioSystem.getClip();
-            audioStream = AudioSystem.getAudioInputStream(clipSource);
+            AudioInputStream audioStream = AudioSystem.getAudioInputStream(clipSource);
             clip.open(audioStream);
+            audioStream.close();
 
             return new TimerTask() {
                 @Override
@@ -59,16 +59,14 @@ public class Pinger {
     }
 
     public void stop() {
-        timer.cancel();
+        if(timer != null) {
+            timer.cancel();
+            timer = null;
+        }
+
         if(clip != null) {
             clip.close();
-        }
-        if(audioStream != null) {
-            try {
-                audioStream.close();
-            } catch (Exception e) {
-                System.out.println(String.format("Exception: %s", e.getMessage()));
-            }
+            clip = null;
         }
     }
 }
