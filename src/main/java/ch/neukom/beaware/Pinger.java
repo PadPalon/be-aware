@@ -9,10 +9,12 @@ import java.util.TimerTask;
 import javax.annotation.Nullable;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.Clip;
+import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import static javax.sound.sampled.AudioSystem.*;
+import static javax.sound.sampled.FloatControl.Type.*;
 
 /**
  * plays a sound in a loop with a predefined interval
@@ -32,8 +34,8 @@ public class Pinger {
         this.interval = interval;
     }
 
-    public void start() {
-        TimerTask task = getPingTask();
+    public void start(float initialLevel) {
+        TimerTask task = getPingTask(initialLevel);
         if(task != null) {
             timer = new Timer();
             timer.scheduleAtFixedRate(task, 0, interval * 1000L);
@@ -41,10 +43,11 @@ public class Pinger {
     }
 
     @Nullable
-    private TimerTask getPingTask() {
+    private TimerTask getPingTask(float initialLevel) {
         try {
             clip = getClip();
             loadSound();
+            updateLevel(initialLevel);
 
             return new TimerTask() {
                 @Override
@@ -66,6 +69,13 @@ public class Pinger {
             BufferedInputStream bufferedStream = new BufferedInputStream(resourceStream);
             AudioInputStream audioStream = getAudioInputStream(bufferedStream)) {
             clip.open(audioStream);
+        }
+    }
+
+    public void updateLevel(float level) {
+        if(clip != null && clip.isControlSupported(MASTER_GAIN)) {
+            FloatControl control = (FloatControl) clip.getControl(MASTER_GAIN);
+            control.setValue(20f * (float) Math.log10(level));
         }
     }
 

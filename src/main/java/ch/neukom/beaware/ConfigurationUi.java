@@ -21,6 +21,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Spinner;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -125,10 +126,12 @@ public class ConfigurationUi extends Application {
         stopButton.setDisable(true);
         stopButton.setText("Stop");
 
+        ScrollBar volumeBar = createVolumeBar();
+
         startButton.setOnAction((ActionEvent event) -> {
             startButton.setDisable(true);
             pinger = new Pinger(soundSelect.getValue().getFileName(), spinner.getValue());
-            pinger.start();
+            pinger.start(((float) volumeBar.getValue()) / 100);
             stopButton.setDisable(false);
         });
         stopButton.setOnAction((ActionEvent event) -> {
@@ -149,9 +152,22 @@ public class ConfigurationUi extends Application {
             Platform.exit();
         });
 
-        VBox box = new VBox(startButton, stopButton, quitButton);
+        VBox box = new VBox(volumeBar, startButton, stopButton, quitButton);
         box.setSpacing(10);
         return box;
+    }
+
+    private ScrollBar createVolumeBar() {
+        ScrollBar volumeBar = new ScrollBar();
+        volumeBar.setMin(0);
+        volumeBar.setMax(100);
+        volumeBar.setValue(50);
+        volumeBar.valueProperty().addListener(event -> {
+            if(pinger != null) {
+                pinger.updateLevel(((float) volumeBar.getValue()) / 100);
+            }
+        });
+        return volumeBar;
     }
 
     private static Properties getProperties() throws IOException {
