@@ -5,18 +5,16 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.sun.javafx.collections.ImmutableObservableList;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
@@ -31,7 +29,6 @@ import javafx.util.StringConverter;
 
 /**
  * used to start a {@link Pinger}
- * TODO rework storing of sounds
  */
 public class ConfigurationUi extends Application {
     @Nullable
@@ -42,7 +39,7 @@ public class ConfigurationUi extends Application {
         Properties properties = getProperties();
 
         Spinner<Integer> spinner = new Spinner<>(0, 60, Integer.valueOf(properties.getProperty("interval")));
-        ComboBox<File> soundSelect = createSoundSelect(properties);
+        ComboBox<SoundConfig> soundSelect = createSoundSelect(properties);
         VBox leftSide = createLeftSide(properties, spinner, soundSelect);
 
         VBox rightSide = createRightSide(spinner, soundSelect);
@@ -58,40 +55,56 @@ public class ConfigurationUi extends Application {
         stage.show();
     }
 
-    private ComboBox<File> createSoundSelect(Properties properties) throws URISyntaxException {
-        URI soundsUri = this.getClass().getClassLoader().getResource("sounds/").toURI(); //TODO rework loarding
-        File[] soundFiles = new File(soundsUri).listFiles();
-        ObservableList<File> soundOptions = new ImmutableObservableList<>(soundFiles);
-        ComboBox<File> soundSelect = new ComboBox<>(soundOptions);
-        soundSelect.setConverter(new StringConverter<File>() {
+    private ComboBox<SoundConfig> createSoundSelect(Properties properties) throws IOException {
+        ObservableList<SoundConfig> soundOptions = loadSoundOptions();
+        ComboBox<SoundConfig> soundSelect = new ComboBox<>(soundOptions);
+        soundSelect.setConverter(new StringConverter<SoundConfig>() {
             @Override
-            public String toString(File file) {
-                return file.getName().replace("_", " ");
+            public String toString(SoundConfig soundConfig) {
+                return soundConfig.getDisplay();
             }
 
             @Override
-            public File fromString(String fileName) {
-                File file = loadSound(fileName.replace(" ", "_"));
-                if(file == null) {
-                    assert soundFiles != null;
-                    return soundFiles[0];
-                } else {
-                    return file;
-                }
+            public SoundConfig fromString(String name) {
+                return findSoundOption(name, soundOptions, SoundConfig::getDisplay);
             }
         });
-        soundSelect.setValue(loadSound(properties.getProperty("sound")));
+        soundSelect.setValue(findSoundOption(properties.getProperty("sound"), soundOptions, SoundConfig::getFileName));
         return soundSelect;
+    }
+
+    private SoundConfig findSoundOption(String name,
+                                        List<SoundConfig> soundOptions,
+                                        Function<SoundConfig, String> loadFileToCompare) {
+        return soundOptions.stream()
+            .filter(option -> loadFileToCompare.apply(option).equals(name))
+            .findAny()
+            .orElse(soundOptions.get(0));
+    }
+
+    private ObservableList<SoundConfig> loadSoundOptions() throws IOException {
+        Properties soundConfigs = new Properties();
+
+        InputStream soundProperties = ConfigurationUi.class.getClassLoader().getResourceAsStream("properties/sounds.properties");
+        soundConfigs.load(soundProperties);
+        soundProperties.close();
+
+        return soundConfigs.stringPropertyNames()
+            .stream()
+            .map(name -> new SoundConfig(name, soundConfigs.getProperty(name)))
+            .collect(Collectors.toCollection(FXCollections::observableArrayList));
+
+
     }
 
     private VBox createLeftSide(Properties properties,
                                 Spinner<Integer> spinner,
-                                ComboBox<File> soundSelect) {
+                                ComboBox<SoundConfig> soundSelect) {
         Button saveButton = new Button();
         saveButton.setText("Save");
         saveButton.setOnAction((ActionEvent event) -> {
             properties.setProperty("interval", spinner.getValue().toString());
-            properties.setProperty("sound", soundSelect.getValue().getName());
+            properties.setProperty("sound", soundSelect.getValue().getFileName());
             try {
                 File customProperties = new File("settings.properties");
                 customProperties.createNewFile();
@@ -108,7 +121,7 @@ public class ConfigurationUi extends Application {
         return box;
     }
 
-    private VBox createRightSide(Spinner<Integer> spinner, ComboBox<File> soundSelect) {
+    private VBox createRightSide(Spinner<Integer> spinner, ComboBox<SoundConfig> soundSelect) {
         Button startButton = new Button();
         startButton.setText("Start");
 
@@ -118,7 +131,7 @@ public class ConfigurationUi extends Application {
 
         startButton.setOnAction((ActionEvent event) -> {
             startButton.setDisable(true);
-            pinger = new Pinger(soundSelect.getValue(), spinner.getValue());
+            pinger = new Pinger(soundSelect.getValue().getFileName(), spinner.getValue());
             pinger.start();
             stopButton.setDisable(false);
         });
@@ -160,19 +173,5 @@ public class ConfigurationUi extends Application {
         }
 
         return properties;
-    }
-
-    @Nullable
-    private File loadSound(String fileName) {
-        String soundPath = String.format("sounds/%s", fileName);
-        URL resourceUrl = this.getClass().getClassLoader().getResource(soundPath); //TODO rework loading
-        try {
-            if(resourceUrl != null) {
-                return new File(resourceUrl.toURI());
-            }
-        } catch (Exception e) {
-            // just fall through to null
-        }
-        return null;
     }
 }
