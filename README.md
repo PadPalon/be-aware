@@ -12,13 +12,15 @@ Default properties, can be overwritten in a file called settings.properties that
 sound=Ba_Bum
 #the interval to loop the sound
 interval=10
+#the initial volume
+volume=50
 ```
 
 ## Running the reminder
 
 Start whichever script works for you in `/bin`, which means `be-aware.bat` for Windows and `be-aware` for basically everything else.
-The top field is used to define the interval in which a sound is played. The bottom field is used to select the sound to play.
-The Save button creates or overwrites settings.properties with your current settings.
+Everything is labeled and the configuration panel can be expanded. The save button creates a new settings.properties file or adjusts
+it to contain the current configuration values. The current volume is saved automatically whenever it is changed.
 
 ## Building from sources
 
