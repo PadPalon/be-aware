@@ -18,11 +18,17 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.TitledPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -33,23 +39,29 @@ import javafx.util.StringConverter;
  */
 public class ConfigurationUi extends Application {
     @Nullable
-    Pinger pinger = null;
+    private Pinger pinger = null;
+    @Nullable
+    private Stage stage = null;
 
     @Override
     public void start(Stage stage) throws Exception {
+        this.stage = stage;
+
         Properties properties = getProperties();
 
-        Spinner<Integer> spinner = new Spinner<>(0, 60, Integer.valueOf(properties.getProperty("interval")));
+        Label intervalLabel = new Label("Interval in seconds:");
+        Spinner<Integer> intervalSpinner = new Spinner<>(0, 60, Integer.valueOf(properties.getProperty("interval")));
+
+        Label soundLabel = new Label("Sound:");
         ComboBox<SoundConfig> soundSelect = createSoundSelect(properties);
-        VBox leftSide = createLeftSide(properties, spinner, soundSelect);
 
-        VBox rightSide = createRightSide(spinner, soundSelect);
+        VBox controls = createControls(intervalSpinner, soundSelect);
+        TitledPane configuration = createConfigurationPanel(properties, intervalLabel, intervalSpinner, soundLabel, soundSelect);
+        VBox bottomBar = createBottomBar();
 
-        HBox root = new HBox(leftSide, rightSide);
-        root.setPadding(new Insets(10));
-        root.setSpacing(30);
+        BorderPane borderPane = createContentRoot(configuration, controls, bottomBar);
 
-        Scene scene = new Scene(root, 250, 150);
+        Scene scene = new Scene(borderPane, 500, 160);
 
         stage.setTitle("Be Aware");
         stage.setScene(scene);
@@ -90,17 +102,17 @@ public class ConfigurationUi extends Application {
             .stream()
             .map(name -> new SoundConfig(name, soundConfigs.getProperty(name)))
             .collect(Collectors.toCollection(FXCollections::observableArrayList));
-
-
     }
 
-    private VBox createLeftSide(Properties properties,
-                                Spinner<Integer> spinner,
-                                ComboBox<SoundConfig> soundSelect) {
+    private TitledPane createConfigurationPanel(Properties properties,
+                                                Label intervalLabel,
+                                                Spinner<Integer> intervalSpinner,
+                                                Label soundLabel,
+                                                ComboBox<SoundConfig> soundSelect) {
         Button saveButton = new Button();
         saveButton.setText("Save");
-        saveButton.setOnAction((ActionEvent event) -> {
-            properties.setProperty("interval", spinner.getValue().toString());
+        saveButton.setOnAction((ActionEvent event1) -> {
+            properties.setProperty("interval", intervalSpinner.getValue().toString());
             properties.setProperty("sound", soundSelect.getValue().getFileName());
             try {
                 File customProperties = new File("settings.properties");
@@ -113,12 +125,30 @@ public class ConfigurationUi extends Application {
             }
         });
 
-        VBox box = new VBox(spinner, soundSelect, saveButton);
-        box.setSpacing(10);
-        return box;
+        GridPane settings = new GridPane();
+        settings.setVgap(10);
+        settings.setHgap(10);
+        settings.add(intervalLabel, 0, 0);
+        settings.add(intervalSpinner, 1, 0);
+        settings.add(soundLabel, 0, 1);
+        settings.add(soundSelect, 1, 1);
+        settings.add(saveButton, 1, 2);
+        TitledPane configuration = new TitledPane("Configuration", settings);
+        configuration.setExpanded(false);
+        configuration.expandedProperty().addListener(event -> {
+            if(configuration.isExpanded()) {
+                stage.setHeight(320);
+            } else {
+                stage.setHeight(200);
+            }
+        });
+        return configuration;
     }
 
-    private VBox createRightSide(Spinner<Integer> spinner, ComboBox<SoundConfig> soundSelect) {
+    private VBox createControls(Spinner<Integer> intervalSpinner, ComboBox<SoundConfig> soundSelect) {
+        Label volumeLabel = new Label("Volume: 50");
+        ScrollBar volumeBar = createVolumeBar(volumeLabel);
+
         Button startButton = new Button();
         startButton.setText("Start");
 
@@ -126,11 +156,9 @@ public class ConfigurationUi extends Application {
         stopButton.setDisable(true);
         stopButton.setText("Stop");
 
-        ScrollBar volumeBar = createVolumeBar();
-
         startButton.setOnAction((ActionEvent event) -> {
             startButton.setDisable(true);
-            pinger = new Pinger(soundSelect.getValue().getFileName(), spinner.getValue());
+            pinger = new Pinger(soundSelect.getValue().getFileName(), intervalSpinner.getValue());
             pinger.start(((float) volumeBar.getValue()) / 100);
             stopButton.setDisable(false);
         });
@@ -143,6 +171,30 @@ public class ConfigurationUi extends Application {
             startButton.setDisable(false);
         });
 
+        HBox buttonBox = new HBox(startButton, stopButton);
+        buttonBox.setSpacing(10);
+        buttonBox.setAlignment(Pos.CENTER);
+        VBox controls = new VBox(volumeLabel, volumeBar, buttonBox);
+        controls.setSpacing(10);
+        return controls;
+    }
+
+    private ScrollBar createVolumeBar(Label volumeLabel) {
+        ScrollBar volumeBar = new ScrollBar();
+        volumeBar.setMin(0);
+        volumeBar.setMax(100);
+        volumeBar.setValue(50);
+        volumeBar.valueProperty().addListener(event -> {
+            double value = volumeBar.getValue();
+            volumeLabel.setText(String.format("Volume: %s", (int) value));
+            if(pinger != null) {
+                pinger.updateLevel(((float) value) / 100);
+            }
+        });
+        return volumeBar;
+    }
+
+    private VBox createBottomBar() {
         Button quitButton = new Button();
         quitButton.setText("Quit");
         quitButton.setOnAction((ActionEvent event) -> {
@@ -152,22 +204,20 @@ public class ConfigurationUi extends Application {
             Platform.exit();
         });
 
-        VBox box = new VBox(volumeBar, startButton, stopButton, quitButton);
-        box.setSpacing(10);
-        return box;
+        VBox bottomBar = new VBox(quitButton);
+        bottomBar.setAlignment(Pos.CENTER_RIGHT);
+        return bottomBar;
     }
 
-    private ScrollBar createVolumeBar() {
-        ScrollBar volumeBar = new ScrollBar();
-        volumeBar.setMin(0);
-        volumeBar.setMax(100);
-        volumeBar.setValue(50);
-        volumeBar.valueProperty().addListener(event -> {
-            if(pinger != null) {
-                pinger.updateLevel(((float) volumeBar.getValue()) / 100);
-            }
-        });
-        return volumeBar;
+    private BorderPane createContentRoot(Node center, Node top, Node bottom) {
+        BorderPane borderPane = new BorderPane();
+        borderPane.setTop(top);
+        BorderPane.setMargin(center, new Insets(10, 0, 10, 0));
+        BorderPane.setAlignment(center, Pos.TOP_CENTER);
+        borderPane.setCenter(center);
+        borderPane.setBottom(bottom);
+        borderPane.setPadding(new Insets(10));
+        return borderPane;
     }
 
     private static Properties getProperties() throws IOException {
