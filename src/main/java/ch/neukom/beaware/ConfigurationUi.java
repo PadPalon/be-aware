@@ -55,7 +55,7 @@ public class ConfigurationUi extends Application {
         Label soundLabel = new Label("Sound:");
         ComboBox<SoundConfig> soundSelect = createSoundSelect(properties);
 
-        VBox controls = createControls(intervalSpinner, soundSelect);
+        VBox controls = createControls(intervalSpinner, soundSelect, properties);
         TitledPane configuration = createConfigurationPanel(properties, intervalLabel, intervalSpinner, soundLabel, soundSelect);
         VBox bottomBar = createBottomBar();
 
@@ -114,15 +114,7 @@ public class ConfigurationUi extends Application {
         saveButton.setOnAction((ActionEvent event1) -> {
             properties.setProperty("interval", intervalSpinner.getValue().toString());
             properties.setProperty("sound", soundSelect.getValue().getFileName());
-            try {
-                File customProperties = new File("settings.properties");
-                customProperties.createNewFile();
-                FileOutputStream outputStream = new FileOutputStream(customProperties);
-                properties.store(outputStream, "saved from UI");
-                outputStream.close();
-            } catch (Exception e) {
-                System.out.println(String.format("Exception: %s", e.getMessage()));
-            }
+            updateProperties(properties);
         });
 
         GridPane settings = new GridPane();
@@ -145,9 +137,13 @@ public class ConfigurationUi extends Application {
         return configuration;
     }
 
-    private VBox createControls(Spinner<Integer> intervalSpinner, ComboBox<SoundConfig> soundSelect) {
-        Label volumeLabel = new Label("Volume: 50");
-        ScrollBar volumeBar = createVolumeBar(volumeLabel);
+    private VBox createControls(Spinner<Integer> intervalSpinner,
+                                ComboBox<SoundConfig> soundSelect,
+                                Properties properties) {
+        String volume = properties.getProperty("volume");
+
+        Label volumeLabel = new Label(String.format("Volume: %s", volume));
+        ScrollBar volumeBar = createVolumeBar(volumeLabel, Integer.valueOf(volume), properties);
 
         Button startButton = new Button();
         startButton.setText("Start");
@@ -179,17 +175,24 @@ public class ConfigurationUi extends Application {
         return controls;
     }
 
-    private ScrollBar createVolumeBar(Label volumeLabel) {
+    private ScrollBar createVolumeBar(Label volumeLabel, Integer initialValue, Properties properties) {
         ScrollBar volumeBar = new ScrollBar();
         volumeBar.setMin(0);
         volumeBar.setMax(100);
-        volumeBar.setValue(50);
+        volumeBar.setValue(initialValue);
         volumeBar.valueProperty().addListener(event -> {
             double value = volumeBar.getValue();
-            volumeLabel.setText(String.format("Volume: %s", (int) value));
+            int roundedValue = (int) value;
+            String volumeString = String.format("Volume: %s", roundedValue);
+
+            volumeLabel.setText(volumeString);
+
             if(pinger != null) {
                 pinger.updateLevel(((float) value) / 100);
             }
+
+            properties.setProperty("volume", Integer.toString(roundedValue));
+            updateProperties(properties);
         });
         return volumeBar;
     }
@@ -241,5 +244,17 @@ public class ConfigurationUi extends Application {
         resourceProperties.close();
 
         return properties;
+    }
+
+    private void updateProperties(Properties properties) {
+        try {
+            File customProperties = new File("settings.properties");
+            customProperties.createNewFile();
+            FileOutputStream outputStream = new FileOutputStream(customProperties);
+            properties.store(outputStream, "saved from UI");
+            outputStream.close();
+        } catch (Exception e) {
+            System.out.println(String.format("Exception: %s", e.getMessage()));
+        }
     }
 }
