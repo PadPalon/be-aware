@@ -4,7 +4,7 @@ before_install:
  - chmod +x gradlew
 
 install:
-  - gradle shadowJar
+  - gradle assemble
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
@@ -13,7 +13,9 @@ deploy:
   provider: releases
   api_key:
     secure: "UbrJspTTMseDpG9AOTfKaGS0umyFn3wMd2pz8+45Z7JygcKsww9CNaQ75MNdl1fjIMhNwXj2WtixvXWK0FVsk3EzZO8i1UrE0lZEtIYfJg8Fnr9ttcn3LiKUioCfNI36kfA3wvL6gH2L6QmtpVzFvT4pHznEhn68LGnZi6FruU7kv/eFaQJR1INKZ26cbzrLXa7+9LwyRN3ZG6kjdFS/30VZwh++SHm+ObIUjwKZLZwUVxV0yNEHsPiCaZ7s8E1Sh9w1ZeqmksBGiG/nNIMjWThtvQD1tCL2MG8F/PBRQhwXphO+LgONxmT+RkjbviuGdqyHILPILbt8ZbW94SXqEaHP0taTQmQlcHmulqaIAiQSnxECtJg5gJeY21ty3yXUnsKFCTry3jkzzYA6ezRZ/eFc0/kyz6nDocFJ7GxJXXZ2+IzHwaJPltC0jiU50OUmnCjcEEPowO/BVw0V42pNsHd7kf9EMhFqsxouS+eI6EhQfmh7E+MT3nsQWY013bW/dy4w3j9j7xrU/+LxiwPpRDdWDFAlhwn93guAfu0zKFxEgEjL4Dp/mcRa6m3ymWf/YkfowCItjzXbeNg2SWX48kGJeNfK4aBmfZ6SwG1JdmYbfwZCNTl42xV4UcTMqMAFiW+xKb/eP2Kn2QEP9EGx3RUJaDlwzlvWSfGrLQ06efQ="
-  file: "build/libs/beAware.jar"
+  file:
+    - "build/distributions/beAware.zip"
+    - "build/distributions/beAware.tar"
   skip_cleanup: true
   on:
     tags: true

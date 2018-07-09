@@ -31,6 +31,7 @@ import javafx.util.StringConverter;
 
 /**
  * used to start a {@link Pinger}
+ * TODO rework storing of sounds
  */
 public class ConfigurationUi extends Application {
     @Nullable
@@ -58,7 +59,7 @@ public class ConfigurationUi extends Application {
     }
 
     private ComboBox<File> createSoundSelect(Properties properties) throws URISyntaxException {
-        URI soundsUri = this.getClass().getClassLoader().getResource("sounds/").toURI();
+        URI soundsUri = this.getClass().getClassLoader().getResource("sounds/").toURI(); //TODO rework loarding
         File[] soundFiles = new File(soundsUri).listFiles();
         ObservableList<File> soundOptions = new ImmutableObservableList<>(soundFiles);
         ComboBox<File> soundSelect = new ComboBox<>(soundOptions);
@@ -164,7 +165,7 @@ public class ConfigurationUi extends Application {
     @Nullable
     private File loadSound(String fileName) {
         String soundPath = String.format("sounds/%s", fileName);
-        URL resourceUrl = this.getClass().getClassLoader().getResource(soundPath);
+        URL resourceUrl = this.getClass().getClassLoader().getResource(soundPath); //TODO rework loading
         try {
             if(resourceUrl != null) {
                 return new File(resourceUrl.toURI());
