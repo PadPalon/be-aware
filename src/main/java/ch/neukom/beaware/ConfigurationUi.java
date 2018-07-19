@@ -152,6 +152,12 @@ public class ConfigurationUi extends Application {
         stopButton.setDisable(true);
         stopButton.setText("Stop");
 
+        soundSelect.valueProperty()
+            .addListener((observable, oldValue, newValue) -> {
+                Pinger previewPinger = new Pinger(newValue.getFileName(), intervalSpinner.getValue());
+                previewPinger.preview(((float) volumeBar.getValue()) / 100);
+            });
+
         startButton.setOnAction((ActionEvent event) -> {
             intervalSpinner.setDisable(true);
             soundSelect.setDisable(true);

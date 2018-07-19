@@ -3,6 +3,7 @@ package ch.neukom.beaware;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -42,6 +43,18 @@ public class Pinger {
         }
     }
 
+    public void preview(float level) {
+        try(Clip previewClip = getClip()) {
+            loadSound(previewClip);
+            updateLevel(previewClip, level);
+            previewClip.start();
+            while(previewClip.getFramePosition() < previewClip.getFrameLength()) {
+            }
+        } catch (Exception e) {
+            System.out.println(String.format("Exception: %s", e.getMessage()));
+        }
+    }
+
     @Nullable
     private TimerTask getPingTask(float initialLevel) {
         try {
@@ -64,6 +77,10 @@ public class Pinger {
     }
 
     private void loadSound() throws UnsupportedAudioFileException, IOException, LineUnavailableException {
+        loadSound(clip);
+    }
+
+    private void loadSound(Clip clip) throws UnsupportedAudioFileException, IOException, LineUnavailableException {
         String soundPath = String.format("sounds/%s", clipSource);
         try(InputStream resourceStream = this.getClass().getClassLoader().getResourceAsStream(soundPath);
             BufferedInputStream bufferedStream = new BufferedInputStream(resourceStream);
@@ -73,6 +90,10 @@ public class Pinger {
     }
 
     public void updateLevel(float level) {
+        updateLevel(clip, level);
+    }
+
+    private void updateLevel(@Nullable Clip clip, float level) {
         if(clip != null && clip.isControlSupported(MASTER_GAIN)) {
             FloatControl control = (FloatControl) clip.getControl(MASTER_GAIN);
             control.setValue(20f * (float) Math.log10(level));
